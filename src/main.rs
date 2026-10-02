@@ -1,5 +1,7 @@
 mod filesystem;
 
+use crate::filesystem::scanner::scan;
+
 fn main() {
-    println!("Hello, world!");
+    scan();
 }
