@@ -17,7 +17,17 @@ pub fn insert_file_entry(conn: &Connection, entry: &FileEntry) -> Result<()> {
             modified,
             is_directory,
             is_hidden
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+        )
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+        ON CONFLICT(path) DO UPDATE SET
+            device = excluded.device,
+            inode = excluded.inode,
+            filename = excluded.filename,
+            extension = excluded.extension,
+            size = excluded.size,
+            modified = excluded.modified,
+            is_directory = excluded.is_directory,
+            is_hidden = excluded.is_hidden",
         (
             entry.device as i64,
             entry.inode as i64,

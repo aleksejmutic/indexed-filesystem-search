@@ -10,7 +10,13 @@ pub fn index_filesystem() -> rusqlite::Result<()> {
 
     let exclusions = load_config().expect("Failed to load configuration");
 
+    println!("Starting filesystem scan...");
+
     let entries = scan(&exclusions).expect("Filesystem scan failed");
+
+    println!("Scan finished. Found {} entries.", entries.len());
+
+    println!("Starting database insertion...");
 
     for entry in entries {
         insert_file_entry(&conn, &entry)?;
