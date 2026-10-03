@@ -1,3 +1,4 @@
+#[derive(Debug)] //Rust attribute that tells the compuler to automatically implement the Degub trait on the ScanError type
 pub enum ScanError {
     WalkDir(walkdir::Error),
     Io(std::io::Error),

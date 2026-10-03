@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::time::{Duration, UNIX_EPOCH};
 
 //insert a file entry row
-fn insert_file_entry(conn: &Connection, entry: &FileEntry) -> Result<()> {
+pub fn insert_file_entry(conn: &Connection, entry: &FileEntry) -> Result<()> {
     conn.execute(
         "INSERT INTO file_entries (
             device,
