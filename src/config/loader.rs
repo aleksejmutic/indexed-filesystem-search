@@ -27,6 +27,7 @@ pub fn load_config() -> Result<Exclusions, Box<dyn std::error::Error>> {
 }
 
 //function that returns default exclusions, some of the ones I do not need, this can be changed inside of the toml file
+//it is only called when the config.toml file does not exist, so when it is created these are the exclusions which are assigned
 fn default_exclusions() -> Exclusions {
     Exclusions {
         directories: vec![
