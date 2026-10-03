@@ -4,7 +4,7 @@ use crate::database::repository::insert_file_entry;
 use crate::filesystem::scanner::scan;
 
 pub fn index_filesystem() -> rusqlite::Result<()> {
-    let conn = connect()?; //create a database connection
+    let mut conn = connect()?; //create a database connection
 
     create_schema(&conn)?; //create the schema
 
@@ -18,9 +18,19 @@ pub fn index_filesystem() -> rusqlite::Result<()> {
 
     println!("Starting database insertion...");
 
-    for entry in entries {
-        insert_file_entry(&conn, &entry)?;
+    let transaction = conn.transaction()?;
+
+    for (i, entry) in entries.iter().enumerate() {
+        insert_file_entry(&transaction, entry)?;
+
+        if i % 1000 == 0 {
+            println!("Inserted {} entries...", i);
+        }
     }
+
+    transaction.commit()?;
+
+    println!("Database insertion finished.");
 
     Ok(())
 }
