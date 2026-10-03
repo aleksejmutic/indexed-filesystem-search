@@ -174,3 +174,33 @@ fn update_file_entry(conn: &Connection, id: i64, entry: &FileEntry) -> Result<()
 
     Ok(())
 }
+
+pub fn search_file_entries(conn: &Connection, query: &str, limit: i64) -> Result<Vec<FileEntry>> {
+    let mut statement = conn.prepare(
+        "SELECT
+            device,
+            inode,
+            path,
+            filename,
+            extension,
+            size,
+            modified,
+            is_directory,
+            is_hidden
+        FROM file_entries
+        WHERE filename LIKE ?1
+        LIMIT ?2",
+    )?;
+
+    let search_pattern = format!("%{}%", query);
+
+    let entries = statement.query_map((search_pattern, limit), file_entry_from_row)?;
+
+    let mut entries_vec = Vec::new();
+
+    for entry in entries {
+        entries_vec.push(entry?);
+    }
+
+    Ok(entries_vec)
+}
