@@ -41,8 +41,8 @@ pub fn scan(exclusions: &Exclusions) -> Result<Vec<FileEntry>, ScanError> {
                 .map(|name| name.to_string_lossy().starts_with('.'))
                 .unwrap_or(false), //if it is None, it just returns a bool false, just unwraps the Option enum with a fallback/default
             is_symlink: symlink_metadata.file_type().is_symlink(),
-            is_executable: metadata.mode() & 0o111 != 0, //this is an octal representation, as that is how permission notation works in Unix
-                                                         //111 just means execute bit for owner, group and others
+            is_executable: !metadata.is_dir() && metadata.mode() & 0o111 != 0, //this is an octal representation, as that is how permission notation works in Unix
+                                                                               //111 just means execute bit for owner, group and others
         };
         println!("{}", entry.path().display());
 
