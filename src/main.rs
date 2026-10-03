@@ -7,9 +7,9 @@ use crate::database::connection::connect;
 use crate::database::repository::search_file_entries;
 
 fn main() -> rusqlite::Result<()> {
-    //indexer::sync_filesystem()?;
+    indexer::sync_filesystem()?;
 
-    test_search()?;
+    //test_search()?;
 
     Ok(())
 }
