@@ -1,5 +1,6 @@
 use crate::filesystem::exclusions::Exclusions;
 use std::fs;
+
 //function that loads the configuration fro the toml file
 pub fn load_config() -> Result<Exclusions, Box<dyn std::error::Error>> {
     let config_directory = dirs::config_dir()

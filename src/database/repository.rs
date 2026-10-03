@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::time::{Duration, UNIX_EPOCH};
 
 //insert a file entry row
-pub fn insert_file_entry(conn: &Connection, entry: &FileEntry) -> Result<()> {
+pub fn insert_file_entry(conn: &Connection, entry: &FileEntry, scan_id: i64) -> Result<()> {
     conn.execute(
         "INSERT INTO file_entries (
             device,
@@ -16,9 +16,10 @@ pub fn insert_file_entry(conn: &Connection, entry: &FileEntry) -> Result<()> {
             size,
             modified,
             is_directory,
-            is_hidden
+            is_hidden,
+            last_seen
         )
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
         ON CONFLICT(path) DO UPDATE SET
             device = excluded.device,
             inode = excluded.inode,
@@ -27,7 +28,8 @@ pub fn insert_file_entry(conn: &Connection, entry: &FileEntry) -> Result<()> {
             size = excluded.size,
             modified = excluded.modified,
             is_directory = excluded.is_directory,
-            is_hidden = excluded.is_hidden",
+            is_hidden = excluded.is_hidden,
+            last_seen = excluded.last_seen",
         (
             entry.device as i64,
             entry.inode as i64,
@@ -48,6 +50,7 @@ pub fn insert_file_entry(conn: &Connection, entry: &FileEntry) -> Result<()> {
                 .as_secs() as i64,
             entry.is_directory,
             entry.is_hidden,
+            scan_id,
         ),
     )?;
 

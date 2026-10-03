@@ -20,8 +20,15 @@ pub fn index_filesystem() -> rusqlite::Result<()> {
 
     let transaction = conn.transaction()?;
 
+    //creates a new scan_id based on the previous one
+    let scan_id: i64 = transaction.query_row(
+        "SELECT COALESCE(MAX(last_seen), 0) + 1 FROM file_entries",
+        [],
+        |row| row.get(0),
+    )?;
+
     for (i, entry) in entries.iter().enumerate() {
-        insert_file_entry(&transaction, entry)?;
+        insert_file_entry(&transaction, entry, scan_id)?;
 
         if i % 1000 == 0 {
             println!("Inserted {} entries...", i);
