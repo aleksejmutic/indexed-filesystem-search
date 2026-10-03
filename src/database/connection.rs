@@ -20,7 +20,10 @@ pub fn create_schema(conn: &Connection) -> Result<()> {
             size INTEGER NOT NULL,
             modified INTEGER NOT NULL,
             is_directory INTEGER NOT NULL,
-            is_hidden INTEGER NOT NULL
+            is_symlink INTEGER NOT NULL,
+            is_executable INTEGER NOT NULL,
+            is_hidden INTEGER NOT NULL,
+            last_seen INTEGER NOT NULL DEFAULT 0
         )",
         (),
     )?;

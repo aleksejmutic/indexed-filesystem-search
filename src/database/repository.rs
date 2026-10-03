@@ -4,7 +4,8 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::time::{Duration, UNIX_EPOCH};
 
-//insert a file entry row
+//insert a file entry row, last_seen is only important in the context of deletion states, where a file entry needs to be removed from the database
+//when it no longer exists in the filesystem
 pub fn insert_file_entry(conn: &Connection, entry: &FileEntry, scan_id: i64) -> Result<()> {
     conn.execute(
         "INSERT INTO file_entries (
@@ -16,10 +17,12 @@ pub fn insert_file_entry(conn: &Connection, entry: &FileEntry, scan_id: i64) -> 
             size,
             modified,
             is_directory,
+            is_symlink,
+            is_executable,
             is_hidden,
             last_seen
         )
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
         ON CONFLICT(path) DO UPDATE SET
             device = excluded.device,
             inode = excluded.inode,
@@ -28,6 +31,8 @@ pub fn insert_file_entry(conn: &Connection, entry: &FileEntry, scan_id: i64) -> 
             size = excluded.size,
             modified = excluded.modified,
             is_directory = excluded.is_directory,
+            is_symlink = excluded.is_symlink,
+            is_executable = excluded.is_executable,
             is_hidden = excluded.is_hidden,
             last_seen = excluded.last_seen",
         (
@@ -49,6 +54,8 @@ pub fn insert_file_entry(conn: &Connection, entry: &FileEntry, scan_id: i64) -> 
                 .unwrap()
                 .as_secs() as i64,
             entry.is_directory,
+            entry.is_symlink,
+            entry.is_executable,
             entry.is_hidden,
             scan_id,
         ),
@@ -66,7 +73,9 @@ fn file_entry_from_row(row: &Row) -> Result<FileEntry> {
     let size: i64 = row.get(5)?;
     let modified: i64 = row.get(6)?;
     let is_directory: bool = row.get(7)?;
-    let is_hidden: bool = row.get(8)?;
+    let is_symlink: bool = row.get(8)?;
+    let is_executable: bool = row.get(9)?;
+    let is_hidden: bool = row.get(10)?;
 
     Ok(FileEntry {
         device: device as u64,
@@ -77,6 +86,8 @@ fn file_entry_from_row(row: &Row) -> Result<FileEntry> {
         size: size as u64,
         modified: UNIX_EPOCH + Duration::from_secs(modified as u64),
         is_directory,
+        is_symlink,
+        is_executable,
         is_hidden,
     })
 }
@@ -93,6 +104,8 @@ fn get_file_entry(conn: &Connection, id: i64) -> Result<FileEntry> {
             size,
             modified,
             is_directory,
+            is_symlink,
+            is_executable,
             is_hidden
         FROM file_entries
         WHERE id = ?1",
@@ -115,6 +128,8 @@ fn get_all_file_entries(conn: &Connection) -> Result<Vec<FileEntry>> {
             size,
             modified,
             is_directory,
+            is_symlink,
+            is_executable,
             is_hidden
         FROM file_entries",
     )?;
@@ -150,8 +165,10 @@ fn update_file_entry(conn: &Connection, id: i64, entry: &FileEntry) -> Result<()
             size = ?6,
             modified = ?7,
             is_directory = ?8,
-            is_hidden = ?9
-        WHERE id = ?10",
+            is_symlink = ?9,
+            is_directory = ?10,
+            is_hidden = ?11
+        WHERE id = ?12",
         (
             entry.device as i64,
             entry.inode as i64,
@@ -167,6 +184,8 @@ fn update_file_entry(conn: &Connection, id: i64, entry: &FileEntry) -> Result<()
             entry.size as i64,
             entry.modified.duration_since(UNIX_EPOCH).unwrap().as_secs() as i64,
             entry.is_directory,
+            entry.is_symlink,
+            entry.is_executable,
             entry.is_hidden,
             id,
         ),
@@ -186,6 +205,8 @@ pub fn search_file_entries(conn: &Connection, query: &str, limit: i64) -> Result
             size,
             modified,
             is_directory,
+            is_symlink,
+            is_executable,
             is_hidden
         FROM file_entries
         WHERE filename LIKE ?1
