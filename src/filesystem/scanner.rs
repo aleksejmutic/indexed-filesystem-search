@@ -1,6 +1,7 @@
 use crate::filesystem::entry::FileEntry;
 use crate::filesystem::error::ScanError;
 use std::env;
+use std::os::unix::fs::MetadataExt; //Unix extension trait used to identify the device and inode of a specific file
 use walkdir::WalkDir;
 
 pub fn scan() -> Result<Vec<FileEntry>, ScanError> {
@@ -16,6 +17,8 @@ pub fn scan() -> Result<Vec<FileEntry>, ScanError> {
         let metadata = entry.metadata()?;
 
         let file_entry = FileEntry {
+            device: metadata.dev(),
+            inode: metadata.ino(),
             path: entry.path().to_path_buf(),
             filename: entry.path().file_name().map(|name| name.to_os_string()), //closures, closures, closures...
             extension: entry
@@ -31,7 +34,7 @@ pub fn scan() -> Result<Vec<FileEntry>, ScanError> {
                 .map(|name| name.to_string_lossy().starts_with('.'))
                 .unwrap_or(false), //if it is None, it just returns a bool false, just unwraps the Option enum with a fallback/default
         };
-        println!("{}", entry.path().display());q
+        println!("{}", entry.path().display());
 
         entries.push(file_entry);
     }
