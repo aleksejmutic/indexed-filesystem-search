@@ -31,7 +31,7 @@ pub fn scan() -> Result<Vec<FileEntry>, ScanError> {
                 .map(|name| name.to_string_lossy().starts_with('.'))
                 .unwrap_or(false), //if it is None, it just returns a bool false, just unwraps the Option enum with a fallback/default
         };
-        println!("{}", entry.path().display());
+        println!("{}", entry.path().display());q
 
         entries.push(file_entry);
     }
