@@ -1,5 +1,5 @@
 use crate::filesystem::entry::FileEntry;
-use rusqlite::{Connection, Result};
+use rusqlite::{Connection, Result, Row};
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::time::{Duration, UNIX_EPOCH};
@@ -44,6 +44,30 @@ fn insert_file_entry(conn: &Connection, entry: &FileEntry) -> Result<()> {
     Ok(())
 }
 
+fn file_entry_from_row(row: &Row) -> Result<FileEntry> {
+    let device: i64 = row.get(0)?;
+    let inode: i64 = row.get(1)?;
+    let path: String = row.get(2)?;
+    let filename: Option<String> = row.get(3)?;
+    let extension: Option<String> = row.get(4)?;
+    let size: i64 = row.get(5)?;
+    let modified: i64 = row.get(6)?;
+    let is_directory: bool = row.get(7)?;
+    let is_hidden: bool = row.get(8)?;
+
+    Ok(FileEntry {
+        device: device as u64,
+        inode: inode as u64,
+        path: PathBuf::from(path),
+        filename: filename.map(OsString::from),
+        extension: extension.map(OsString::from),
+        size: size as u64,
+        modified: UNIX_EPOCH + Duration::from_secs(modified as u64),
+        is_directory,
+        is_hidden,
+    })
+}
+
 //read one file entry by id
 fn get_file_entry(conn: &Connection, id: i64) -> Result<FileEntry> {
     let mut statement = conn.prepare(
@@ -61,29 +85,7 @@ fn get_file_entry(conn: &Connection, id: i64) -> Result<FileEntry> {
         WHERE id = ?1",
     )?;
 
-    let entry = statement.query_row([id], |row| {
-        let device: i64 = row.get(0)?;
-        let inode: i64 = row.get(1)?;
-        let path: String = row.get(2)?;
-        let filename: Option<String> = row.get(3)?;
-        let extension: Option<String> = row.get(4)?;
-        let size: i64 = row.get(5)?;
-        let modified: i64 = row.get(6)?;
-        let is_directory: bool = row.get(7)?;
-        let is_hidden: bool = row.get(8)?;
-
-        Ok(FileEntry {
-            device: device as u64,
-            inode: inode as u64,
-            path: PathBuf::from(path),
-            filename: filename.map(OsString::from),
-            extension: extension.map(OsString::from),
-            size: size as u64,
-            modified: std::time::UNIX_EPOCH + std::time::Duration::from_secs(modified as u64),
-            is_directory,
-            is_hidden,
-        })
-    })?;
+    let entry = statement.query_row([id], file_entry_from_row)?;
 
     Ok(entry) //wrapping the entry again into a Result type, promised in the function declaration as the return type
 }
@@ -104,29 +106,7 @@ fn get_all_file_entries(conn: &Connection) -> Result<Vec<FileEntry>> {
         FROM file_entries",
     )?;
 
-    let entries = statement.query_map([], |row| {
-        let device: i64 = row.get(0)?;
-        let inode: i64 = row.get(1)?;
-        let path: String = row.get(2)?;
-        let filename: Option<String> = row.get(3)?;
-        let extension: Option<String> = row.get(4)?;
-        let size: i64 = row.get(5)?;
-        let modified: i64 = row.get(6)?;
-        let is_directory: bool = row.get(7)?;
-        let is_hidden: bool = row.get(8)?;
-
-        Ok(FileEntry {
-            device: device as u64,
-            inode: inode as u64,
-            path: PathBuf::from(path),
-            filename: filename.map(OsString::from),
-            extension: extension.map(OsString::from),
-            size: size as u64,
-            modified: UNIX_EPOCH + Duration::from_secs(modified as u64),
-            is_directory,
-            is_hidden,
-        })
-    })?;
+    let entries = statement.query_map([], file_entry_from_row)?;
 
     let mut entries_vec = Vec::new();
 
