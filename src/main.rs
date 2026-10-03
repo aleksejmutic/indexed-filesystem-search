@@ -4,7 +4,7 @@ mod filesystem;
 mod indexer;
 
 fn main() -> rusqlite::Result<()> {
-    indexer::index_filesystem()?;
+    indexer::sync_filesystem()?;
 
     Ok(())
 }

@@ -3,7 +3,7 @@ use crate::database::connection::{connect, create_schema};
 use crate::database::repository::insert_file_entry;
 use crate::filesystem::scanner::scan;
 
-pub fn index_filesystem() -> rusqlite::Result<()> {
+pub fn sync_filesystem() -> rusqlite::Result<()> {
     let mut conn = connect()?; //create a database connection
 
     create_schema(&conn)?; //create the schema
@@ -34,6 +34,9 @@ pub fn index_filesystem() -> rusqlite::Result<()> {
             println!("Inserted {} entries...", i);
         }
     }
+
+    // Remove files that were not encountered during this scan
+    transaction.execute("DELETE FROM file_entries WHERE last_seen != ?1", [scan_id])?;
 
     transaction.commit()?;
 
