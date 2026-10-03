@@ -1,10 +1,11 @@
 use crate::filesystem::entry::FileEntry;
 use crate::filesystem::error::ScanError;
+use crate::filesystem::exclusions::Exclusions;
 use std::env;
 use std::os::unix::fs::MetadataExt; //Unix extension trait used to identify the device and inode of a specific file
 use walkdir::WalkDir;
 
-pub fn scan() -> Result<Vec<FileEntry>, ScanError> {
+pub fn scan(exclusions: &Exclusions) -> Result<Vec<FileEntry>, ScanError> {
     let home_directory = match env::home_dir() {
         Some(path) => path,
         None => panic!("Could not determine the home directory."),
@@ -12,7 +13,11 @@ pub fn scan() -> Result<Vec<FileEntry>, ScanError> {
 
     let mut entries: Vec<FileEntry> = Vec::new();
 
-    for entry in WalkDir::new(home_directory) {
+    let walker = WalkDir::new(home_directory) //prunes the tree, filters the exclusions, so during the tree walk the contents of excluded directories wont be searched
+        .into_iter()
+        .filter_entry(|entry| !exclusions.should_skip_directory(entry.path()));
+
+    for entry in walker {
         let entry = entry?;
         let metadata = entry.metadata()?;
 
