@@ -1,8 +1,7 @@
 use crate::config::loader::load_config;
 use crate::database::connection::{connect, create_schema};
-use crate::database::repository::{
-    insert_file_entry, is_fts_populated, mark_fts_populated, populate_fts,
-};
+use crate::database::fts::{is_fts_populated, mark_fts_populated, populate_fts};
+use crate::database::repository::insert_file_entry;
 use crate::filesystem::scanner::scan;
 
 pub fn sync_filesystem() -> rusqlite::Result<()> {
