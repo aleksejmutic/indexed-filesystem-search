@@ -14,18 +14,19 @@ pub fn search(conn: &Connection, query: &str, limit: i64) -> rusqlite::Result<Ve
             let fts_query = build_fts_query(query);
             search_file_entries(conn, &fts_query, limit)
         }
-        // this strategy basically takes two tokens from the search and tried a HardAnd implementation, and if nothing is found,
+        // this strategy basically tries an AND search first and if fewer than limit results are found, fills the remaining slots
+        // by alternating results from each individual token
         // it falls back to searching each token separately, first token, then second token, with also checking for duplicates in the search
         Some(SearchStrategy::SoftAnd) => {
             let tokens: Vec<&str> = query.split_whitespace().collect();
 
-            let exact_query = format!("{}* {}*", tokens[0], tokens[1]);
+            let exact_query = build_fts_query(query);
 
             let mut results = search_file_entries(conn, &exact_query, limit)?;
 
             if results.len() < limit as usize {
-                let first_query = format!("{}*", tokens[0]);
-                let second_query = format!("{}*", tokens[1]);
+                let first_query = build_fts_query(tokens[0]);
+                let second_query = build_fts_query(tokens[1]);
 
                 let first_results = search_file_entries(conn, &first_query, limit)?;
                 let second_results = search_file_entries(conn, &second_query, limit)?;
