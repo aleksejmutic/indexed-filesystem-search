@@ -166,7 +166,7 @@ fn update_file_entry(conn: &Connection, id: i64, entry: &FileEntry) -> Result<()
             modified = ?7,
             is_directory = ?8,
             is_symlink = ?9,
-            is_directory = ?10,
+            is_executable = ?10,
             is_hidden = ?11
         WHERE id = ?12",
         (
@@ -193,7 +193,7 @@ fn update_file_entry(conn: &Connection, id: i64, entry: &FileEntry) -> Result<()
 
     Ok(())
 }
-
+//search using fts5 index
 pub fn search_file_entries(conn: &Connection, query: &str, limit: i64) -> Result<Vec<FileEntry>> {
     let mut statement = conn.prepare(
         "SELECT
@@ -209,13 +209,15 @@ pub fn search_file_entries(conn: &Connection, query: &str, limit: i64) -> Result
             is_executable,
             is_hidden
         FROM file_entries
-        WHERE filename LIKE ?1
+        WHERE id IN (
+            SELECT rowid
+            FROM file_entries_fts
+            WHERE file_entries_fts MATCH ?1
+        )
         LIMIT ?2",
     )?;
 
-    let search_pattern = format!("%{}%", query);
-
-    let entries = statement.query_map((search_pattern, limit), file_entry_from_row)?;
+    let entries = statement.query_map((query, limit), file_entry_from_row)?;
 
     let mut entries_vec = Vec::new();
 

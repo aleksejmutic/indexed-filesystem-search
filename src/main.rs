@@ -7,9 +7,9 @@ use crate::database::connection::connect;
 use crate::database::repository::search_file_entries;
 
 fn main() -> rusqlite::Result<()> {
-    indexer::sync_filesystem()?;
+    //indexer::sync_filesystem()?;
 
-    //test_search()?;
+    test_search()?;
 
     Ok(())
 }
@@ -17,7 +17,7 @@ fn main() -> rusqlite::Result<()> {
 fn test_search() -> rusqlite::Result<()> {
     let conn = connect()?;
 
-    let entries = search_file_entries(&conn, "firefox", 10)?;
+    let entries = search_file_entries(&conn, "firefox sqlite", 10)?;
 
     for entry in entries {
         println!("{}", entry.path.display());
