@@ -9,7 +9,7 @@ pub fn build_fts_query(query: &str) -> String {
                 let extension = token.trim_start_matches('.');
                 format!("extension:{}*", extension)
             } else {
-                format!("{}*", token)
+                escape_fts_token(token)
             }
         })
         .collect::<Vec<_>>()
@@ -34,4 +34,11 @@ pub fn determine_strategy(query: &str) -> Option<SearchStrategy> {
         2 => Some(SearchStrategy::SoftAnd),
         _ => Some(SearchStrategy::HardAnd),
     }
+}
+
+// every " character is replaced with "", then the escape character is inside of curly braces {}
+// and inside of it we insert between it another "" so it is wrapped as a string
+// everything that does not contain any whitespaces is treated as a separate string token
+fn escape_fts_token(token: &str) -> String {
+    format!("\"{}*\"", token.replace('"', "\"\""))
 }

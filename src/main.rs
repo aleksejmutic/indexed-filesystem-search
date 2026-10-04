@@ -52,5 +52,16 @@ fn test_search() -> rusqlite::Result<()> {
         println!("{}", entry.path.display());
     }
 
+    println!("{}", build_fts_query("hello (test"));
+    println!("___ hello (test ___");
+    for entry in search(&conn, "hello (test", 10)? {
+        println!("{}", entry.path.display());
+    }
+
+    println!("___ foo:bar ___");
+    for entry in search(&conn, "foo:bar", 10)? {
+        println!("{}", entry.path.display());
+    }
+
     Ok(())
 }
