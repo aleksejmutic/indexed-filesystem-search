@@ -5,6 +5,7 @@ mod indexer;
 mod search;
 
 use crate::database::connection::connect;
+use crate::search::query::build_fts_query;
 use crate::search::search::search;
 
 fn main() -> rusqlite::Result<()> {
@@ -37,6 +38,14 @@ fn test_search() -> rusqlite::Result<()> {
     for entry in search(&conn, "fire xyzabc", 10)? {
         println!("{}", entry.path.display());
     }
+
+    println!("___ fire xyzabc memes .pdf___");
+    for entry in search(&conn, "fire xyzabc memes .pdf", 10)? {
+        println!("{}", entry.path.display());
+    }
+
+    println!("___ FTS query ___");
+    println!("{}", build_fts_query("fire xyzabc memes .pdf"));
 
     Ok(())
 }

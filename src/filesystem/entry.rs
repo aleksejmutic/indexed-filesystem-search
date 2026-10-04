@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::time::SystemTime;
-
+#[derive(Clone)] //FileEntries are cloned so it needs the Clone derive attribute
 pub struct FileEntry {
     pub device: u64,
     pub inode: u64,

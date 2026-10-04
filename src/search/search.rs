@@ -30,23 +30,34 @@ pub fn search(conn: &Connection, query: &str, limit: i64) -> rusqlite::Result<Ve
                 let first_results = search_file_entries(conn, &first_query, limit)?;
                 let second_results = search_file_entries(conn, &second_query, limit)?;
 
-                for entry in first_results {
+                let mut first_index = 0;
+                let mut second_index = 0;
+
+                while results.len() < limit as usize
+                    && (first_index < first_results.len() || second_index < second_results.len())
+                {
+                    if first_index < first_results.len() {
+                        let entry = &first_results[first_index];
+
+                        if !results.iter().any(|existing| existing.path == entry.path) {
+                            results.push(entry.clone()); //I am cloning since FileEntry is already owned, but I can own a clone
+                        }
+
+                        first_index += 1;
+                    }
+
                     if results.len() >= limit as usize {
                         break;
                     }
 
-                    if !results.iter().any(|existing| existing.path == entry.path) {
-                        results.push(entry);
-                    }
-                }
+                    if second_index < second_results.len() {
+                        let entry = &second_results[second_index];
 
-                for entry in second_results {
-                    if results.len() >= limit as usize {
-                        break;
-                    }
+                        if !results.iter().any(|existing| existing.path == entry.path) {
+                            results.push(entry.clone());
+                        }
 
-                    if !results.iter().any(|existing| existing.path == entry.path) {
-                        results.push(entry);
+                        second_index += 1;
                     }
                 }
             }
