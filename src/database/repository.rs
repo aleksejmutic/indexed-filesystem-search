@@ -4,6 +4,14 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 use std::time::{Duration, UNIX_EPOCH};
 
+// describes the results of database operations, this is the outcome of what happens to file entries as filesystem operations are being done
+// important for FTS5 synchronization
+pub enum SyncResult {
+    Unchanged,
+    Inserted,
+    Updated,
+}
+
 //insert a file entry row, last_seen is only important in the context of deletion states, where a file entry needs to be removed from the database
 //when it no longer exists in the filesystem
 pub fn insert_file_entry(conn: &Connection, entry: &FileEntry, scan_id: i64) -> Result<()> {
