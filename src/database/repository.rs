@@ -1,5 +1,5 @@
 use crate::filesystem::entry::FileEntry;
-use rusqlite::{Connection, Result, Row};
+use rusqlite::{Connection, OptionalExtension, Result, Row};
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::time::{Duration, UNIX_EPOCH};
@@ -64,18 +64,22 @@ pub fn insert_file_entry(conn: &Connection, entry: &FileEntry, scan_id: i64) -> 
     Ok(())
 }
 
-fn file_entry_from_row(row: &Row) -> Result<FileEntry> {
-    let device: i64 = row.get(0)?;
-    let inode: i64 = row.get(1)?;
-    let path: String = row.get(2)?;
-    let filename: Option<String> = row.get(3)?;
-    let extension: Option<String> = row.get(4)?;
-    let size: i64 = row.get(5)?;
-    let modified: i64 = row.get(6)?;
-    let is_directory: bool = row.get(7)?;
-    let is_symlink: bool = row.get(8)?;
-    let is_executable: bool = row.get(9)?;
-    let is_hidden: bool = row.get(10)?;
+// An offset is needed because some queries select file_entries.id before
+// the other file_entries columns. In those queries, the FileEntry data
+// starts at column 1 instead of column 0. The offset tells this function
+// where the file_entries fields begin in the query result.
+fn file_entry_from_row(row: &Row, offset: usize) -> Result<FileEntry> {
+    let device: i64 = row.get(offset)?;
+    let inode: i64 = row.get(offset + 1)?;
+    let path: String = row.get(offset + 2)?;
+    let filename: Option<String> = row.get(offset + 3)?;
+    let extension: Option<String> = row.get(offset + 4)?;
+    let size: i64 = row.get(offset + 5)?;
+    let modified: i64 = row.get(offset + 6)?;
+    let is_directory: bool = row.get(offset + 7)?;
+    let is_symlink: bool = row.get(offset + 8)?;
+    let is_executable: bool = row.get(offset + 9)?;
+    let is_hidden: bool = row.get(offset + 10)?;
 
     Ok(FileEntry {
         device: device as u64,
@@ -111,9 +115,41 @@ fn get_file_entry(conn: &Connection, id: i64) -> Result<FileEntry> {
         WHERE id = ?1",
     )?;
 
-    let entry = statement.query_row([id], file_entry_from_row)?;
+    let entry = statement.query_row([id], |row| file_entry_from_row(row, 0))?;
 
     Ok(entry) //wrapping the entry again into a Result type, promised in the function declaration as the return type
+}
+
+// we get file entries by their path
+pub fn get_file_entry_by_path(conn: &Connection, path: &str) -> Result<Option<(i64, FileEntry)>> {
+    let mut statement = conn.prepare(
+        "SELECT
+            id,
+            device,
+            inode,
+            path,
+            filename,
+            extension,
+            size,
+            modified,
+            is_directory,
+            is_symlink,
+            is_executable,
+            is_hidden
+        FROM file_entries
+        WHERE path = ?1",
+    )?;
+
+    let entry = statement
+        .query_row([path], |row| {
+            let id: i64 = row.get(0)?;
+            let entry = file_entry_from_row(row, 1)?;
+
+            Ok((id, entry))
+        })
+        .optional()?;
+
+    Ok(entry)
 }
 
 //read all file entries
@@ -134,7 +170,7 @@ fn get_all_file_entries(conn: &Connection) -> Result<Vec<FileEntry>> {
         FROM file_entries",
     )?;
 
-    let entries = statement.query_map([], file_entry_from_row)?;
+    let entries = statement.query_map([], |row| file_entry_from_row(row, 0))?;
 
     let mut entries_vec = Vec::new();
 
@@ -217,7 +253,7 @@ pub fn search_file_entries(conn: &Connection, query: &str, limit: i64) -> Result
         LIMIT ?2",
     )?;
 
-    let entries = statement.query_map((query, limit), file_entry_from_row)?;
+    let entries = statement.query_map((query, limit), |row| file_entry_from_row(row, 0))?;
 
     let mut entries_vec = Vec::new();
 
