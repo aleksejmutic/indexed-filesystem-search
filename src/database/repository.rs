@@ -64,6 +64,7 @@ pub fn insert_file_entry(conn: &Connection, entry: &FileEntry, scan_id: i64) -> 
     Ok(())
 }
 
+// This function takes a row from the database and converts into a FileEntry type
 // An offset is needed because some queries select file_entries.id before
 // the other file_entries columns. In those queries, the FileEntry data
 // starts at column 1 instead of column 0. The offset tells this function
