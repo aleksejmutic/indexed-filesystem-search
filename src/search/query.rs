@@ -1,8 +1,17 @@
-//a query builder function that basically splits at whitespaces and does matching, outputs a format which FTS5 wants to use
+// a query builder function that basically splits at whitespaces and does matching, outputs a format which FTS5 wants to use
+// important thing is that if one of the tokens has a . dot as the first character, that is then an extension
+// so that token is returned as expression: pdf if the string token is .pdf
 pub fn build_fts_query(query: &str) -> String {
     query
         .split_whitespace()
-        .map(|token| format!("{}*", token))
+        .map(|token| {
+            if token.starts_with('.') {
+                let extension = token.trim_start_matches('.');
+                format!("extension:{}*", extension)
+            } else {
+                format!("{}*", token)
+            }
+        })
         .collect::<Vec<_>>()
         .join(" ")
 }

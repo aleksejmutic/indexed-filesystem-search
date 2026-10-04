@@ -47,5 +47,10 @@ fn test_search() -> rusqlite::Result<()> {
     println!("___ FTS query ___");
     println!("{}", build_fts_query("fire xyzabc memes .pdf"));
 
+    println!("___ .pdf ___");
+    for entry in search(&conn, ".pdf", 10)? {
+        println!("{}", entry.path.display());
+    }
+
     Ok(())
 }
