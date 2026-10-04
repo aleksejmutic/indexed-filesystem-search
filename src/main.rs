@@ -17,8 +17,12 @@ fn main() -> rusqlite::Result<()> {
 fn test_search() -> rusqlite::Result<()> {
     let conn = connect()?;
 
-    let entries = search_file_entries(&conn, "firefox sqlite", 10)?;
+    let entries = search_file_entries(&conn, "sqlite firefox", 10)?;
+    for entry in entries {
+        println!("{}", entry.path.display());
+    }
 
+    let entries = search_file_entries(&conn, "fox", 10)?;
     for entry in entries {
         println!("{}", entry.path.display());
     }
