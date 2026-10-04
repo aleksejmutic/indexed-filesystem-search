@@ -9,6 +9,7 @@ pub fn connect() -> Result<Connection> {
 
 //schema creation
 pub fn create_schema(conn: &Connection) -> Result<()> {
+    //creates the file_entries table
     conn.execute(
         "create table if not exists file_entries (
             id INTEGER PRIMARY KEY,
@@ -27,5 +28,27 @@ pub fn create_schema(conn: &Connection) -> Result<()> {
         )",
         (),
     )?;
+
+    //creates the fts5 index from file_entries table
+    conn.execute(
+        "CREATE VIRTUAL TABLE IF NOT EXISTS file_entries_fts USING fts5(
+            filename,
+            extension,
+            path,
+            content='file_entries',
+            content_rowid='id'
+        )",
+        (),
+    )?;
+
+    //creates a metadata table that would check whether fts5 table is filled with data or not
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS metadata (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )",
+        (),
+    )?;
+
     Ok(())
 }

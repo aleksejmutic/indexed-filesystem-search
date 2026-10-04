@@ -1,6 +1,8 @@
 use crate::config::loader::load_config;
 use crate::database::connection::{connect, create_schema};
-use crate::database::repository::insert_file_entry;
+use crate::database::repository::{
+    insert_file_entry, is_fts_populated, mark_fts_populated, populate_fts,
+};
 use crate::filesystem::scanner::scan;
 
 pub fn sync_filesystem() -> rusqlite::Result<()> {
@@ -41,6 +43,14 @@ pub fn sync_filesystem() -> rusqlite::Result<()> {
     transaction.commit()?;
 
     println!("Database insertion finished.");
+
+    //populating the fts5 index, done after the transaction, as file_entries table needs to finish its work, and then fts5 index comes into play
+    if !is_fts_populated(&conn)? {
+        println!("Populating FTS5 index...");
+        populate_fts(&conn)?;
+        mark_fts_populated(&conn)?;
+        println!("FTS5 population finished.");
+    }
 
     Ok(())
 }
