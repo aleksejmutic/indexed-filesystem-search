@@ -4,3 +4,5 @@ A Linux filesystem search application written in Rust that indexes file metadata
 It scans the user's home directory, or any set default location, while supporting configurable file, extension, and directory exclusions through a TOML configuration file.
 
 The project is currently focused on building the filesystem index and keeping it synchronized with the actual filesystem.
+
+Important: Most of the issues created are to be closed, I just like to keep them opened as they serve me as some form of documentation of where I am headed.
