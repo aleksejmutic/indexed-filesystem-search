@@ -1,3 +1,4 @@
+use notify::event::ModifyKind;
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
 
@@ -5,14 +6,18 @@ pub fn watch(path: &Path) -> notify::Result<()> {
     let mut watcher = RecommendedWatcher::new(
         |result: notify::Result<Event>| match result {
             Ok(event) => match event.kind {
-                EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                EventKind::Create(_)
+                | EventKind::Remove(_)
+                | EventKind::Modify(ModifyKind::Name(_)) => {
                     println!("Event: {:?}", event.kind);
 
                     for path in event.paths {
-                        println!("Path: {}", path.display());
+                        if path.to_string_lossy().contains("watcher-test") {
+                            println!("Event: {:?}", event.kind);
+                            println!("Path: {}", path.display());
+                        }
                     }
                 }
-
                 _ => {}
             },
 
