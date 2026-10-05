@@ -6,7 +6,7 @@ mod search;
 mod synchronization;
 
 use crate::config::loader::load_config;
-use crate::database::connection::connect;
+use crate::database::connection::{connect, create_schema};
 use crate::filesystem::scanner::scan;
 use crate::search::query::build_fts_query;
 use crate::search::search::search;
@@ -74,6 +74,8 @@ fn test_search() -> rusqlite::Result<()> {
 // function to test syncing
 fn test_sync() -> rusqlite::Result<()> {
     let conn = connect()?;
+
+    create_schema(&conn)?;
 
     let path = "/home/alexei/message.txt";
 

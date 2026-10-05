@@ -52,7 +52,7 @@ pub fn insert_file_entry(conn: &Connection, entry: &FileEntry, scan_id: i64) -> 
                 .modified
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
-                .as_secs() as i64,
+                .as_nanos() as i64,
             entry.is_directory,
             entry.is_symlink,
             entry.is_executable,
@@ -89,7 +89,7 @@ fn file_entry_from_row(row: &Row, offset: usize) -> Result<FileEntry> {
         filename: filename.map(OsString::from),
         extension: extension.map(OsString::from),
         size: size as u64,
-        modified: UNIX_EPOCH + Duration::from_secs(modified as u64),
+        modified: UNIX_EPOCH + Duration::from_nanos(modified as u64),
         is_directory,
         is_symlink,
         is_executable,
@@ -225,7 +225,11 @@ pub fn update_file_entry(
                 .as_ref()
                 .map(|x| x.to_string_lossy().to_string()),
             entry.size as i64,
-            entry.modified.duration_since(UNIX_EPOCH).unwrap().as_secs() as i64,
+            entry
+                .modified
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos() as i64,
             entry.is_directory,
             entry.is_symlink,
             entry.is_executable,
