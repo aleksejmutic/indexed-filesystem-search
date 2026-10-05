@@ -1,7 +1,8 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::time::SystemTime;
-#[derive(Clone)] //FileEntries are cloned so it needs the Clone derive attribute
+#[derive(Clone, PartialEq)] //FileEntries are cloned so it needs the Clone derive attribute
+// they are also compared for equality so if all fields are the same that would mean the file entry is unchanged
 pub struct FileEntry {
     pub device: u64,
     pub inode: u64,

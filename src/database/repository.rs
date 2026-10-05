@@ -190,7 +190,12 @@ fn delete_file_entry(conn: &Connection, id: i64) -> Result<()> {
 }
 
 //updates an existing file entry
-fn update_file_entry(conn: &Connection, id: i64, entry: &FileEntry) -> Result<()> {
+pub fn update_file_entry(
+    conn: &Connection,
+    id: i64,
+    entry: &FileEntry,
+    scan_id: i64,
+) -> Result<()> {
     conn.execute(
         "UPDATE file_entries
         SET
@@ -204,8 +209,9 @@ fn update_file_entry(conn: &Connection, id: i64, entry: &FileEntry) -> Result<()
             is_directory = ?8,
             is_symlink = ?9,
             is_executable = ?10,
-            is_hidden = ?11
-        WHERE id = ?12",
+            is_hidden = ?11,
+            last_seen = ?12,
+        WHERE id = ?13",
         (
             entry.device as i64,
             entry.inode as i64,
@@ -224,12 +230,26 @@ fn update_file_entry(conn: &Connection, id: i64, entry: &FileEntry) -> Result<()
             entry.is_symlink,
             entry.is_executable,
             entry.is_hidden,
+            scan_id,
             id,
         ),
     )?;
 
     Ok(())
 }
+
+// updating the last_seen field
+pub fn update_last_seen(conn: &Connection, id: i64, scan_id: i64) -> Result<()> {
+    conn.execute(
+        "UPDATE file_entries
+         SET last_seen = ?1
+         WHERE id = ?2",
+        (scan_id, id),
+    )?;
+
+    Ok(())
+}
+
 //search using fts5 index
 pub fn search_file_entries(conn: &Connection, query: &str, limit: i64) -> Result<Vec<FileEntry>> {
     let mut statement = conn.prepare(
