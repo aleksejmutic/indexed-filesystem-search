@@ -21,7 +21,10 @@ pub fn watch(path: &Path) -> notify::Result<()> {
         Config::default(),
     )?;
 
-    watcher.watch(path, RecursiveMode::Recursive)?;
+    // let the watcher tolerate eroors, very important to test out!!!
+    if let Err(error) = watcher.watch(path, RecursiveMode::Recursive) {
+        println!("Failed to watch {}: {:?}", path.display(), error);
+    }
 
     println!("Watching: {}", path.display());
 
