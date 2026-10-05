@@ -12,11 +12,11 @@ use crate::search::query::build_fts_query;
 use crate::search::search::search;
 
 fn main() -> rusqlite::Result<()> {
-    //indexer::sync_filesystem()?;
+    indexer::sync_filesystem()?;
 
     // test_search()?;
 
-    test_sync()?;
+    //test_sync()?;
 
     Ok(())
 }

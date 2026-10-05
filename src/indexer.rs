@@ -1,8 +1,8 @@
 use crate::config::loader::load_config;
 use crate::database::connection::{connect, create_schema};
 use crate::database::fts::{is_fts_populated, mark_fts_populated, populate_fts};
-use crate::database::repository::insert_file_entry;
 use crate::filesystem::scanner::scan;
+use crate::synchronization::sync::sync_file_entry;
 
 pub fn sync_filesystem() -> rusqlite::Result<()> {
     let mut conn = connect()?; //create a database connection
@@ -29,10 +29,10 @@ pub fn sync_filesystem() -> rusqlite::Result<()> {
     )?;
 
     for (i, entry) in entries.iter().enumerate() {
-        insert_file_entry(&transaction, entry, scan_id)?;
+        sync_file_entry(&transaction, entry, scan_id)?;
 
         if i % 1000 == 0 {
-            println!("Inserted {} entries...", i);
+            println!("Synchronized {} entries...", i);
         }
     }
 
