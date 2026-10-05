@@ -1,0 +1,3 @@
+Results when there are no transactions during synchronization:
+Synchronization took: 14.138654855s
+Deletion took: 78.345646ms
