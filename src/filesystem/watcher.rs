@@ -23,7 +23,8 @@ pub fn watch(path: &Path) -> notify::Result<()> {
 
             Err(error) => println!("Watcher error: {:?}", error),
         },
-        Config::default(),
+        // this will ignore entering symlinks targets
+        Config::default().with_follow_symlinks(false),
     )?;
 
     // let the watcher tolerate eroors, very important to test out!!!
