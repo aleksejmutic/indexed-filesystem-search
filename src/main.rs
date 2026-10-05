@@ -5,7 +5,9 @@ mod indexer;
 mod search;
 mod synchronization;
 
+use crate::config::loader::load_config;
 use crate::database::connection::connect;
+use crate::filesystem::scanner::scan;
 use crate::search::query::build_fts_query;
 use crate::search::search::search;
 
@@ -75,12 +77,14 @@ fn test_sync() -> rusqlite::Result<()> {
 
     let path = "/home/alexei/message.txt";
 
-    // We need a FileEntry representing the filesystem state here.
-    // For the first test, get one from the database and use it as the
-    // filesystem entry.
+    let exclusions = load_config().expect("Failed to load configuration");
 
-    let (_, entry) = crate::database::repository::get_file_entry_by_path(&conn, path)?
-        .expect("File should already exist in database");
+    let entries = scan(&exclusions).expect("Filesystem scan failed");
+
+    let entry = entries
+        .into_iter()
+        .find(|entry| entry.path.to_string_lossy() == path)
+        .expect("File should exist on filesystem");
 
     let result = crate::synchronization::sync::sync_file_entry(&conn, &entry, 999999)?;
 

@@ -210,7 +210,7 @@ pub fn update_file_entry(
             is_symlink = ?9,
             is_executable = ?10,
             is_hidden = ?11,
-            last_seen = ?12,
+            last_seen = ?12
         WHERE id = ?13",
         (
             entry.device as i64,
