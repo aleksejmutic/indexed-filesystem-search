@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 dirs = "7.0.0"
+notify = "8.2.0"
 rusqlite = "0.40.2"
 serde = { version = "1.0.229", features = ["derive"] }
 toml = "1.1.6"

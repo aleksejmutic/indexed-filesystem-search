@@ -1,5 +1,6 @@
 use crate::config::loader::load_config;
 use crate::database::connection::{connect, create_schema};
+use crate::filesystem;
 use crate::filesystem::scanner::scan;
 use crate::search::query::build_fts_query;
 use crate::search::search::search;
@@ -82,5 +83,11 @@ pub fn test_sync() -> rusqlite::Result<()> {
         }
     );
 
+    Ok(())
+}
+
+pub fn test_watcher() -> notify::Result<()> {
+    let home = std::env::home_dir().expect("Could not find home directory");
+    filesystem::watcher::watch(&home)?;
     Ok(())
 }
