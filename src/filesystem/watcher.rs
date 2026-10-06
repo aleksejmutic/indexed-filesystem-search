@@ -1,6 +1,6 @@
 use crate::config::loader::load_config;
-use notify::event::ModifyKind;
-use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use crate::filesystem::listener;
+use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
 use walkdir::WalkDir;
 
@@ -10,22 +10,7 @@ pub fn watch(path: &Path) -> notify::Result<()> {
 
     let mut watcher = RecommendedWatcher::new(
         |result: notify::Result<Event>| match result {
-            Ok(event) => match event.kind {
-                EventKind::Create(_)
-                | EventKind::Remove(_)
-                | EventKind::Modify(ModifyKind::Name(_)) => {
-                    println!("Event: {:?}", event.kind);
-
-                    for path in event.paths {
-                        if path.to_string_lossy().contains("watcher-test") {
-                            println!("Event: {:?}", event.kind);
-                            println!("Path: {}", path.display());
-                        }
-                    }
-                }
-                _ => {}
-            },
-
+            Ok(event) => listener::listen(event),
             Err(error) => println!("Watcher error: {:?}", error),
         },
         // this will ignore entering symlinks targets
