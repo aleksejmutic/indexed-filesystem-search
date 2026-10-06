@@ -8,12 +8,13 @@ pub fn listen(event: Event, transmitter: &Sender<Event>) {
         EventKind::Create(_) | EventKind::Remove(_) | EventKind::Modify(ModifyKind::Name(_)) => {
             println!("Event: {:?}", event.kind);
 
-            for path in &event.paths {
-                if path.to_string_lossy().contains("watcher-test") {
-                    println!("Event: {:?}", event.kind);
-                    println!("Path: {}", path.display());
-                }
-            }
+            // this was just a test to print an exact file to see whether it works in the pipeline
+            // for path in &event.paths {
+            //     if path.to_string_lossy().contains("watcher-test") {
+            //         println!("Event: {:?}", event.kind);
+            //         println!("Path: {}", path.display());
+            //     }
+            // }
 
             transmitter
                 .send(event)
