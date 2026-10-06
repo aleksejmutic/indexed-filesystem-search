@@ -2,15 +2,19 @@ use crate::config::loader::load_config;
 use crate::filesystem::listener;
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::Path;
+use std::sync::mpsc::channel;
 use walkdir::WalkDir;
 
 pub fn watch(path: &Path) -> notify::Result<()> {
     // adding exclusions to be taken into consideration
     let exclusions = load_config().expect("Failed to load configuration");
 
+    // unwrapping what channel returns, that would be a transmitter and a receiver
+    let (transmiter, receiver) = channel();
+
     let mut watcher = RecommendedWatcher::new(
-        |result: notify::Result<Event>| match result {
-            Ok(event) => listener::listen(event),
+        move |result: notify::Result<Event>| match result {
+            Ok(event) => listener::listen(event, &transmiter),
             Err(error) => println!("Watcher error: {:?}", error),
         },
         // this will ignore entering symlinks targets
@@ -39,7 +43,10 @@ pub fn watch(path: &Path) -> notify::Result<()> {
 
     println!("Watching: {}", path.display());
 
-    loop {
-        std::thread::park();
+    // reading events from the receiver and showing their kind
+    for event in receiver {
+        println!("Received event from channel: {:?}", event.kind);
     }
+
+    Ok(())
 }
