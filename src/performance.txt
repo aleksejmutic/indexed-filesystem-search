@@ -1,3 +1,16 @@
 Results when there are no transactions during synchronization:
+First run:
 Synchronization took: 14.138654855s
 Deletion took: 78.345646ms
+
+Second run(even worse and this one happened after exclusions have been introduced to the synchronization process):
+Synchronization took: 15.115865173s
+Deletion took: 73.521304ms
+
+This is a current estimation, I will probably try to change stuff up:
+
+Filesystem entries: 668,818
+
+Scan:          ~7.3 s
+Synchronization: ~14–15 s
+Deletion:      ~55–80 ms
