@@ -5,7 +5,7 @@ It scans the user's home directory, or any set default location, while supportin
 
 The project is currently focused on building the filesystem index and keeping it synchronized with the actual filesystem.
 
-It will eventually have some CLI and a UI so when a user presses the Super button they can run the app. 
+It will eventually have some CLI and a UI so when a user presses the Super button they can run the app. The UI part will probably be a fork of this, since I want to separate the tool from the whole app launcher.
 
 find, locate, plocate, fd, recoll are all tools that do this, but I was bored and wanted to create something myself.
 
