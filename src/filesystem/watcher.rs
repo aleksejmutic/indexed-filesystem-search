@@ -92,6 +92,17 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                     }
                 }
             }
+
+            // added to test to check whether moving or renaming from a path is registered
+            if event.kind
+                == notify::EventKind::Modify(notify::event::ModifyKind::Name(
+                    notify::event::RenameMode::From,
+                ))
+            {
+                if let Err(error) = watcher.unwatch(path) {
+                    println!("Failed to unwatch {}: {:?}", path.display(), error);
+                }
+            }
         }
     }
 
