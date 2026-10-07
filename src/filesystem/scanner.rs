@@ -3,7 +3,7 @@ use crate::filesystem::error::ScanError;
 use crate::filesystem::exclusions::Exclusions;
 use std::env;
 use std::os::unix::fs::MetadataExt; //Unix extension trait used to identify the device and inode of a specific file
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use walkdir::WalkDir;
 
 // method for creating a file entry programatically in memory, this is now extracted from the scan function
@@ -47,7 +47,18 @@ pub fn scan(exclusions: &Exclusions) -> Result<Vec<FileEntry>, ScanError> {
     for entry in walker {
         let entry = entry?;
 
-        let file_entry = create_file_entry(entry.path())?;
+        // debug since there is an IO error, some directory or file is disappearing between WalkDir finding it and itself being created as a file entry in memory
+        let file_entry = match create_file_entry(entry.path()) {
+            Ok(file_entry) => file_entry,
+            Err(error) => {
+                println!(
+                    "Failed to create FileEntry for {}: {:?}",
+                    entry.path().display(),
+                    error
+                );
+                return Err(error);
+            }
+        };
 
         println!("{}", entry.path().display());
 
