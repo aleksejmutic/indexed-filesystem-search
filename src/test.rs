@@ -65,7 +65,7 @@ pub fn test_sync() -> rusqlite::Result<()> {
 
     let exclusions = load_config().expect("Failed to load configuration");
 
-    let entries = scan(&exclusions).expect("Filesystem scan failed");
+    let entries = scan(&exclusions).expect("Filesystem scan failed"); // this panics, I should see what to do about that
 
     let entry = entries
         .into_iter()

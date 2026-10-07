@@ -47,7 +47,8 @@ pub fn scan(exclusions: &Exclusions) -> Result<Vec<FileEntry>, ScanError> {
     for entry in walker {
         let entry = entry?;
 
-        // debug since there is an IO error, some directory or file is disappearing between WalkDir finding it and itself being created as a file entry in memory
+        // some directory or file can disappearing between WalkDir finding it and itself being created as a file entry in memory,
+        // that is why a continue is done instead of raising the error, to avoid program panic
         let file_entry = match create_file_entry(entry.path()) {
             Ok(file_entry) => file_entry,
             Err(error) => {
@@ -56,7 +57,7 @@ pub fn scan(exclusions: &Exclusions) -> Result<Vec<FileEntry>, ScanError> {
                     entry.path().display(),
                     error
                 );
-                return Err(error);
+                continue; // before this would return an error but then the program would panic and stop working
             }
         };
 
