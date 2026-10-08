@@ -85,6 +85,12 @@ fn default_exclusions() -> Exclusions {
             "log".to_string(),
             "d".to_string(),
         ],
-        files: vec![],
+        // exclusion of sqlite files, the database and journal
+        files: vec![
+            "indexed-files.db".to_string(),
+            "indexed-files.db-journal".to_string(),
+            "indexed-files.db-wal".to_string(),
+            "indexed-files.db-shm".to_string(),
+        ],
     }
 }

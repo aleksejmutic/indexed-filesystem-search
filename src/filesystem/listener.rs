@@ -9,7 +9,8 @@ pub fn listen(event: Event, transmitter: &Sender<Event>) {
         | EventKind::Remove(_)
         | EventKind::Modify(ModifyKind::Name(_))
         | EventKind::Modify(ModifyKind::Data(_)) => {
-            println!("Event: {:?}", event.kind);
+            // redundant print
+            // println!("Event: {:?}", event.kind);
 
             // this was just a test to print an exact file to see whether it works in the pipeline
             // for path in &event.paths {

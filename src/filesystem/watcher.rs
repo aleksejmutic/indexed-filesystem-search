@@ -52,9 +52,15 @@ pub fn watch(path: &Path) -> notify::Result<()> {
     // VERY IMPORTANT: When an event which is either a creation, or moving of a directory, that directory
     // should automatically be watched and registered by notify, and that is assured here, a NonRecursive walk is done on those directories
     for event in receiver {
-        println!("Received event: {:?}", event.kind);
+        // redundant as of now
+        // println!("Received event: {:?}", event.kind);
 
         for path in &event.paths {
+            // exclusions are not printed to the console
+            if exclusions.should_skip_file(path) {
+                continue;
+            }
+
             println!("Path: {}", path.display());
 
             // event kind for folder creation
