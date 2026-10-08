@@ -6,6 +6,7 @@ use crate::filesystem::entry::FileEntry;
 use rusqlite::Connection;
 
 // describes the results of synchronization operations
+#[derive(Debug)] // needs the Debug attribute for printing
 pub enum SyncResult {
     Unchanged,
     Inserted,
