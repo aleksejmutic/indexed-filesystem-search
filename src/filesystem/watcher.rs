@@ -83,6 +83,21 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                 }
             }
 
+            // added event handling for data changes, file content changes, that changes files metadata so it is important to check
+            if event.kind == notify::EventKind::Modify(notify::event::ModifyKind::Data(_)) {
+                match create_file_entry(path) {
+                    Ok(entry) => match sync_file_event(&conn, &entry) {
+                        Ok(result) => println!("File synchronization result: {:?}", result),
+                        Err(error) => println!("Failed to synchronize file: {:?}", error),
+                    },
+                    Err(error) => println!(
+                        "Failed to create FileEntry for {}: {:?}",
+                        path.display(),
+                        error
+                    ),
+                }
+            }
+
             if event.kind
                 == notify::EventKind::Modify(notify::event::ModifyKind::Name(
                     notify::event::RenameMode::To,
