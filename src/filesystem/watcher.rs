@@ -8,10 +8,19 @@ use crate::synchronization::sync::{
 };
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher, event::CreateKind};
 use rusqlite::Connection;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{RecvTimeoutError, channel};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use walkdir::WalkDir;
+
+// How long an unmatched From is kept before it is treated as a move out of the watched tree.
+// This only affects how long a stale row can linger, not correctness: a late To is handled as a
+// move-in and re-indexed by register_tree.
+const MOVE_OUT_GRACE: Duration = Duration::from_millis(500);
+
+// cookie (inotify tracker) -> (old path, when the From arrived)
+type PendingRenames = HashMap<usize, (PathBuf, Instant)>;
 
 // Registers a whole directory tree: every directory gets a watch, and (optionally) every file is indexed.
 // WalkDir yields a directory before its contents, so the watch on a directory is always placed
@@ -60,12 +69,27 @@ fn register_tree(
     }
 }
 
-// a path was moved out of the watched tree (or its To never arrived):
+// a path was moved out of the watched tree (its To never arrived):
 // remove it, and everything under it if it was a directory
 fn drop_moved_out(conn: &Connection, old_path: &Path) {
     println!("MOVED OUT: {}", old_path.display());
     if let Err(error) = delete_directory_event(conn, &old_path.to_string_lossy()) {
         println!("Failed to remove moved-out path from database: {:?}", error);
+    }
+}
+
+// treats every From that has waited longer than the grace period as a move-out
+fn sweep_expired(pending: &mut PendingRenames, conn: &Connection) {
+    let expired: Vec<usize> = pending
+        .iter()
+        .filter(|(_, (_, since))| since.elapsed() >= MOVE_OUT_GRACE)
+        .map(|(cookie, _)| *cookie)
+        .collect();
+
+    for cookie in expired {
+        if let Some((old_path, _)) = pending.remove(&cookie) {
+            drop_moved_out(conn, &old_path);
+        }
     }
 }
 
@@ -78,8 +102,8 @@ pub fn watch(path: &Path) -> notify::Result<()> {
     // unwrapping what channel returns, that would be a transmitter and a receiver
     let (transmiter, receiver) = channel();
 
-    // holds the old path between the From and To halves of a rename
-    let mut renamed_from: Option<PathBuf> = None;
+    // From events waiting for their To, paired by the inotify cookie
+    let mut pending: PendingRenames = HashMap::new();
 
     let mut watcher = RecommendedWatcher::new(
         move |result: notify::Result<Event>| match result {
@@ -101,41 +125,38 @@ pub fn watch(path: &Path) -> notify::Result<()> {
 
     println!("Watching: {}", path.display());
 
-    // reading events from the receiver and showing their kind, also printing events and paths
     // VERY IMPORTANT: whenever a directory appears (creation, or move/rename into the tree), it is
     // watched first and only then scanned, so nothing created inside it can be missed
     loop {
-        // while a From is pending we only wait a short time for its To; if nothing arrives,
-        // the path left the watched tree
-        let event = if renamed_from.is_some() {
-            match receiver.recv_timeout(Duration::from_millis(100)) {
-                Ok(event) => event,
-                Err(RecvTimeoutError::Timeout) => {
-                    if let Some(old_path) = renamed_from.take() {
-                        drop_moved_out(&conn, &old_path);
-                    }
-                    continue;
-                }
-                Err(RecvTimeoutError::Disconnected) => break,
-            }
-        } else {
+        // nothing pending: sleep with zero CPU until an event arrives.
+        // something pending: wake up at most every grace period to expire stale Froms.
+        let event = if pending.is_empty() {
             match receiver.recv() {
                 Ok(event) => event,
                 Err(_) => break,
             }
+        } else {
+            match receiver.recv_timeout(MOVE_OUT_GRACE) {
+                Ok(event) => event,
+                Err(RecvTimeoutError::Timeout) => {
+                    sweep_expired(&mut pending, &conn);
+                    continue;
+                }
+                Err(RecvTimeoutError::Disconnected) => break,
+            }
         };
 
-        // a pending From is only valid if the very next event is its To,
-        // anything else means the From had no matching To
         let is_rename_to = event.kind
             == notify::EventKind::Modify(notify::event::ModifyKind::Name(
                 notify::event::RenameMode::To,
             ));
-        if !is_rename_to {
-            if let Some(old_path) = renamed_from.take() {
-                drop_moved_out(&conn, &old_path);
-            }
-        }
+        let is_rename_from = event.kind
+            == notify::EventKind::Modify(notify::event::ModifyKind::Name(
+                notify::event::RenameMode::From,
+            ));
+
+        // the cookie that pairs the From and To halves of one rename
+        let cookie = event.tracker().unwrap_or(0);
 
         for path in &event.paths {
             // exclusions are not printed to the console
@@ -196,7 +217,8 @@ pub fn watch(path: &Path) -> notify::Result<()> {
             // rename/move target. Whether it is a directory is decided here, because the old path
             // no longer exists on disk by the time the From event is handled
             if is_rename_to {
-                if let Some(old_path) = renamed_from.take() {
+                // a matching cookie means an in-tree rename; no match means a move INTO the tree
+                if let Some((old_path, _)) = pending.remove(&cookie) {
                     println!("OLD: {}", old_path.display());
                     println!("NEW: {}", path.display());
 
@@ -234,13 +256,9 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                 );
             }
 
-            // rename source, only remember the old path
-            if event.kind
-                == notify::EventKind::Modify(notify::event::ModifyKind::Name(
-                    notify::event::RenameMode::From,
-                ))
-            {
-                renamed_from = Some(path.to_path_buf());
+            // rename source, remember the old path under its cookie until the To arrives
+            if is_rename_from {
+                pending.insert(cookie, (path.to_path_buf(), Instant::now()));
             }
 
             // file deletion
@@ -260,6 +278,10 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                 }
             }
         }
+
+        // sweep AFTER handling the event, so a To that arrives right at the deadline still
+        // finds its From, and a busy event stream can't starve the sweep
+        sweep_expired(&mut pending, &conn);
     }
 
     Ok(())
