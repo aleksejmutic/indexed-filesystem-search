@@ -1,6 +1,5 @@
 use crate::config::loader::load_config;
 use crate::database::connection::connect;
-use crate::database::repository::get_file_entry_by_path;
 use crate::filesystem::listener;
 use crate::filesystem::scanner::create_file_entry;
 use crate::synchronization::sync::{
@@ -21,7 +20,9 @@ pub fn watch(path: &Path) -> notify::Result<()> {
     // unwrapping what channel returns, that would be a transmitter and a receiver
     let (transmiter, receiver) = channel();
 
-    let mut renamed_from: Option<PathBuf> = None; //was None before which is not corrent, a path buffer is expected, PathBuf
+    let mut renamed_from: Option<(PathBuf, bool)> = None; //was None before which is not corrent, a path buffer is expected, PathBuf
+    // IMPORTANT: for a name of a specific file, it is important to check whether it is a directory, since if it is a directory, its renaming
+    // follows the path changes of its contents, file descendents
 
     let mut watcher = RecommendedWatcher::new(
         move |result: notify::Result<Event>| match result {
@@ -119,37 +120,25 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                     notify::event::RenameMode::To,
                 ))
             {
-                if let Some(old_path) = renamed_from.take() {
+                if let Some((old_path, is_directory)) = renamed_from.take() {
                     println!("OLD: {}", old_path.display());
                     println!("NEW: {}", path.display());
 
-                    match get_file_entry_by_path(&conn, &old_path.to_string_lossy()) {
-                        Ok(Some((_id, entry))) => {
-                            if entry.is_directory {
-                                if let Err(error) = rename_directory_event(
-                                    &conn,
-                                    &old_path.to_string_lossy(),
-                                    &path.to_string_lossy(),
-                                ) {
-                                    println!("Failed to rename directory in database: {:?}", error);
-                                }
-                            } else {
-                                if let Err(error) = rename_file_event(
-                                    &conn,
-                                    &old_path.to_string_lossy(),
-                                    &path.to_string_lossy(),
-                                ) {
-                                    println!("Failed to rename file in database: {:?}", error);
-                                }
-                            }
+                    if is_directory {
+                        if let Err(error) = rename_directory_event(
+                            &conn,
+                            &old_path.to_string_lossy(),
+                            &path.to_string_lossy(),
+                        ) {
+                            println!("Failed to rename directory in database: {:?}", error);
                         }
-
-                        Ok(None) => {
-                            println!("Old path was not found in database.");
-                        }
-
-                        Err(error) => {
-                            println!("Failed to look up old path: {:?}", error);
+                    } else {
+                        if let Err(error) = rename_file_event(
+                            &conn,
+                            &old_path.to_string_lossy(),
+                            &path.to_string_lossy(),
+                        ) {
+                            println!("Failed to rename file in database: {:?}", error);
                         }
                     }
                 }
@@ -180,13 +169,13 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                 }
             }
 
-            // event for renaming the file, which changes the path as well
+            // event for renaming the file, which changes the path as well, important is that we know whether this is a directory or not
             if event.kind
                 == notify::EventKind::Modify(notify::event::ModifyKind::Name(
                     notify::event::RenameMode::From,
                 ))
             {
-                renamed_from = Some(path.to_path_buf());
+                renamed_from = Some((path.to_path_buf(), path.is_dir()));
             }
 
             // file deletion
