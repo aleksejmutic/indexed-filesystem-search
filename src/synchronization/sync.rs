@@ -50,3 +50,30 @@ pub fn sync_file_entry(
         }
     }
 }
+
+// synchronizes a single filesystem event without affecting last_seen
+pub fn sync_file_event(conn: &Connection, entry: &FileEntry) -> rusqlite::Result<SyncResult> {
+    let path = entry.path.to_string_lossy().to_string();
+
+    match get_file_entry_by_path(conn, &path)? {
+        None => {
+            // The filesystem event tells us that this entry now exists.
+            // We don't change last_seen because this is not a full scan.
+            insert_file_entry(conn, entry, 0)?;
+
+            Ok(SyncResult::Inserted)
+        }
+
+        Some((id, existing_entry)) => {
+            if existing_entry == *entry {
+                Ok(SyncResult::Unchanged)
+            } else {
+                // The entry exists but its filesystem metadata changed.
+                // We will deal with last_seen separately from watcher events.
+                update_file_entry(conn, id, entry, 0)?;
+
+                Ok(SyncResult::Updated)
+            }
+        }
+    }
+}

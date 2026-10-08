@@ -26,7 +26,8 @@ pub fn sync_filesystem() -> rusqlite::Result<()> {
 
     let transaction = conn.transaction()?;
 
-    //creates a new scan_id based on the previous one
+    //creates a new scan_id based on the previous one, looks for the highest existing generation which is represented by last_seen,
+    // incrementing last_seen gives us the new generation number (scan_id)
     let scan_id: i64 = transaction.query_row(
         "SELECT COALESCE(MAX(last_seen), 0) + 1 FROM file_entries",
         [],
