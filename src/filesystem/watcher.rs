@@ -9,7 +9,8 @@ use crate::synchronization::sync::{
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher, event::CreateKind};
 use rusqlite::Connection;
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::channel;
+use std::sync::mpsc::{RecvTimeoutError, channel};
+use std::time::Duration;
 use walkdir::WalkDir;
 
 // Registers a whole directory tree: every directory gets a watch, and (optionally) every file is indexed.
@@ -59,6 +60,15 @@ fn register_tree(
     }
 }
 
+// a path was moved out of the watched tree (or its To never arrived):
+// remove it, and everything under it if it was a directory
+fn drop_moved_out(conn: &Connection, old_path: &Path) {
+    println!("MOVED OUT: {}", old_path.display());
+    if let Err(error) = delete_directory_event(conn, &old_path.to_string_lossy()) {
+        println!("Failed to remove moved-out path from database: {:?}", error);
+    }
+}
+
 pub fn watch(path: &Path) -> notify::Result<()> {
     // adding exclusions to be taken into consideration
     let exclusions = load_config().expect("Failed to load configuration");
@@ -94,7 +104,39 @@ pub fn watch(path: &Path) -> notify::Result<()> {
     // reading events from the receiver and showing their kind, also printing events and paths
     // VERY IMPORTANT: whenever a directory appears (creation, or move/rename into the tree), it is
     // watched first and only then scanned, so nothing created inside it can be missed
-    for event in receiver {
+    loop {
+        // while a From is pending we only wait a short time for its To; if nothing arrives,
+        // the path left the watched tree
+        let event = if renamed_from.is_some() {
+            match receiver.recv_timeout(Duration::from_millis(100)) {
+                Ok(event) => event,
+                Err(RecvTimeoutError::Timeout) => {
+                    if let Some(old_path) = renamed_from.take() {
+                        drop_moved_out(&conn, &old_path);
+                    }
+                    continue;
+                }
+                Err(RecvTimeoutError::Disconnected) => break,
+            }
+        } else {
+            match receiver.recv() {
+                Ok(event) => event,
+                Err(_) => break,
+            }
+        };
+
+        // a pending From is only valid if the very next event is its To,
+        // anything else means the From had no matching To
+        let is_rename_to = event.kind
+            == notify::EventKind::Modify(notify::event::ModifyKind::Name(
+                notify::event::RenameMode::To,
+            ));
+        if !is_rename_to {
+            if let Some(old_path) = renamed_from.take() {
+                drop_moved_out(&conn, &old_path);
+            }
+        }
+
         for path in &event.paths {
             // exclusions are not printed to the console
             if exclusions.should_skip_file(path) {
@@ -153,11 +195,7 @@ pub fn watch(path: &Path) -> notify::Result<()> {
 
             // rename/move target. Whether it is a directory is decided here, because the old path
             // no longer exists on disk by the time the From event is handled
-            if event.kind
-                == notify::EventKind::Modify(notify::event::ModifyKind::Name(
-                    notify::event::RenameMode::To,
-                ))
-            {
+            if is_rename_to {
                 if let Some(old_path) = renamed_from.take() {
                     println!("OLD: {}", old_path.display());
                     println!("NEW: {}", path.display());
