@@ -189,6 +189,18 @@ pub fn delete_file_entry(conn: &Connection, id: i64) -> Result<()> {
     Ok(())
 }
 
+// deletes a directory and all of its contents from the database
+pub fn delete_directory_entries(conn: &Connection, path: &str) -> Result<()> {
+    conn.execute(
+        "DELETE FROM file_entries
+         WHERE path = ?1
+            OR path LIKE ?2",
+        (path, format!("{}/%", path)),
+    )?;
+
+    Ok(())
+}
+
 //updates an existing file entry
 pub fn update_file_entry(
     conn: &Connection,

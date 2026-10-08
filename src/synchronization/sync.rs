@@ -1,6 +1,6 @@
 use crate::database::repository::{
-    delete_file_entry, get_file_entry_by_path, insert_file_entry, update_file_entry,
-    update_file_entry_from_event, update_last_seen,
+    delete_directory_entries, delete_file_entry, get_file_entry_by_path, insert_file_entry,
+    update_file_entry, update_file_entry_from_event, update_last_seen,
 };
 use crate::filesystem::entry::FileEntry;
 use rusqlite::Connection;
@@ -89,4 +89,11 @@ pub fn delete_file_event(conn: &Connection, path: &str) -> rusqlite::Result<bool
             Ok(true)
         }
     }
+}
+
+// deletion of a directory and all of its contents
+pub fn delete_directory_event(conn: &Connection, path: &str) -> rusqlite::Result<()> {
+    delete_directory_entries(conn, path)?;
+
+    Ok(())
 }

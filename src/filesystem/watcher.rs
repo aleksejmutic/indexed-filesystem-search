@@ -2,7 +2,7 @@ use crate::config::loader::load_config;
 use crate::database::connection::connect;
 use crate::filesystem::listener;
 use crate::filesystem::scanner::create_file_entry;
-use crate::synchronization::sync::{delete_file_event, sync_file_event};
+use crate::synchronization::sync::{delete_directory_event, delete_file_event, sync_file_event};
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher, event::CreateKind};
 use std::path::Path;
 use std::sync::mpsc::channel;
@@ -139,12 +139,20 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                 }
             }
 
-            // deletion
+            // file deletion
             if event.kind == notify::EventKind::Remove(notify::event::RemoveKind::File) {
                 match delete_file_event(&conn, &path.to_string_lossy()) {
                     Ok(true) => println!("File deletion result: Deleted"),
                     Ok(false) => println!("File deletion result: Not found"),
                     Err(error) => println!("Failed to delete file: {:?}", error),
+                }
+            }
+
+            // directory deletion
+            if event.kind == notify::EventKind::Remove(notify::event::RemoveKind::Folder) {
+                match delete_directory_event(&conn, &path.to_string_lossy()) {
+                    Ok(()) => println!("Directory deletion result: Deleted"),
+                    Err(error) => println!("Failed to delete directory from database: {:?}", error),
                 }
             }
 
