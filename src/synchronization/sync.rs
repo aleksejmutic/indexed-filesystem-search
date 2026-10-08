@@ -1,5 +1,6 @@
 use crate::database::repository::{
-    get_file_entry_by_path, insert_file_entry, update_file_entry, update_last_seen,
+    get_file_entry_by_path, insert_file_entry, update_file_entry, update_file_entry_from_event,
+    update_last_seen,
 };
 use crate::filesystem::entry::FileEntry;
 use rusqlite::Connection;
@@ -68,9 +69,8 @@ pub fn sync_file_event(conn: &Connection, entry: &FileEntry) -> rusqlite::Result
             if existing_entry == *entry {
                 Ok(SyncResult::Unchanged)
             } else {
-                // The entry exists but its filesystem metadata changed.
-                // We will deal with last_seen separately from watcher events.
-                update_file_entry(conn, id, entry, 0)?;
+                // The entry exists but its filesystem metadata changed.This does not touch last_seen at all.
+                update_file_entry_from_event(conn, id, entry)?;
 
                 Ok(SyncResult::Updated)
             }

@@ -241,6 +241,42 @@ pub fn update_file_entry(
 
     Ok(())
 }
+// update a file entry during synchronization
+pub fn update_file_entry_from_event(conn: &Connection, id: i64, entry: &FileEntry) -> Result<()> {
+    conn.execute(
+        "UPDATE file_entries
+        SET device = ?1, inode = ?2, path = ?3, filename = ?4, extension = ?5,
+            size = ?6, modified = ?7, is_directory = ?8, is_symlink = ?9,
+            is_executable = ?10, is_hidden = ?11
+        WHERE id = ?12",
+        (
+            entry.device as i64,
+            entry.inode as i64,
+            entry.path.to_string_lossy().to_string(),
+            entry
+                .filename
+                .as_ref()
+                .map(|x| x.to_string_lossy().to_string()),
+            entry
+                .extension
+                .as_ref()
+                .map(|x| x.to_string_lossy().to_string()),
+            entry.size as i64,
+            entry
+                .modified
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos() as i64,
+            entry.is_directory,
+            entry.is_symlink,
+            entry.is_executable,
+            entry.is_hidden,
+            id,
+        ),
+    )?;
+
+    Ok(())
+}
 
 // updating the last_seen field
 pub fn update_last_seen(conn: &Connection, id: i64, scan_id: i64) -> Result<()> {
