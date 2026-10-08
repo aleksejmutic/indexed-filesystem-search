@@ -222,7 +222,9 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                     println!("OLD: {}", old_path.display());
                     println!("NEW: {}", path.display());
 
-                    let result = if path.is_dir() {
+                    let is_dir = path.is_dir();
+
+                    let result = if is_dir {
                         rename_directory_event(
                             &conn,
                             &old_path.to_string_lossy(),
@@ -235,8 +237,25 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                             &path.to_string_lossy(),
                         )
                     };
+
                     if let Err(error) = result {
                         println!("Failed to rename in database: {:?}", error);
+                    } else if !is_dir {
+                        // rename_file_entry only changes the path, so refresh filename, extension,
+                        // size, mtime and inode from disk. This also covers atomic saves (write tmp,
+                        // rename over target) where no tmp row existed to be renamed.
+                        match create_file_entry(path) {
+                            Ok(entry) => {
+                                if let Err(error) = sync_file_event(&conn, &entry) {
+                                    println!("Failed to refresh renamed file: {:?}", error);
+                                }
+                            }
+                            Err(error) => println!(
+                                "Failed to create FileEntry for {}: {:?}",
+                                path.display(),
+                                error
+                            ),
+                        }
                     }
                 }
 

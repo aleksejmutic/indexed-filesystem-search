@@ -350,14 +350,21 @@ pub fn rename_directory_entries(conn: &Connection, old_path: &str, new_path: &st
     Ok(())
 }
 
-// renaming a single file entry
+// renaming a single file entry. The destination may already have a row: in an atomic save
+// (write tmp, rename over target) the existing target row is not removed by a separate Remove
+// event before the RenameMode::To arrives, so it is cleared here, inside the same transaction,
+// to avoid violating UNIQUE(path)
 pub fn rename_file_entry(conn: &Connection, old_path: &str, new_path: &str) -> Result<()> {
-    conn.execute(
+    let tx = conn.unchecked_transaction()?;
+
+    tx.execute("DELETE FROM file_entries WHERE path = ?1", [new_path])?;
+
+    tx.execute(
         "UPDATE file_entries
          SET path = ?1
          WHERE path = ?2",
         (new_path, old_path),
     )?;
 
-    Ok(())
+    tx.commit()
 }
