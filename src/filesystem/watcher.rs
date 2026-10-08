@@ -2,9 +2,11 @@ use crate::config::loader::load_config;
 use crate::database::connection::connect;
 use crate::filesystem::listener;
 use crate::filesystem::scanner::create_file_entry;
-use crate::synchronization::sync::{delete_directory_event, delete_file_event, sync_file_event};
+use crate::synchronization::sync::{
+    delete_directory_event, delete_file_event, rename_directory_event, sync_file_event,
+};
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher, event::CreateKind};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::channel;
 use walkdir::WalkDir;
 
@@ -17,7 +19,7 @@ pub fn watch(path: &Path) -> notify::Result<()> {
     // unwrapping what channel returns, that would be a transmitter and a receiver
     let (transmiter, receiver) = channel();
 
-    let mut renamed_from = None;
+    let mut renamed_from: Option<PathBuf> = None; //was None before which is not corrent, a path buffer is expected, PathBuf
 
     let mut watcher = RecommendedWatcher::new(
         move |result: notify::Result<Event>| match result {
@@ -115,6 +117,16 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                     notify::event::RenameMode::To,
                 ))
             {
+                if let Some(old_path) = renamed_from.take() {
+                    if let Err(error) = rename_directory_event(
+                        &conn,
+                        &old_path.to_string_lossy(),
+                        &path.to_string_lossy(),
+                    ) {
+                        println!("Failed to rename directory in database: {:?}", error);
+                    }
+                }
+
                 if exclusions.should_skip_directory(path) {
                     continue;
                 }
