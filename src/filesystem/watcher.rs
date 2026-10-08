@@ -118,6 +118,8 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                 ))
             {
                 if let Some(old_path) = renamed_from.take() {
+                    println!("OLD: {}", old_path.display());
+                    println!("NEW: {}", path.display());
                     if let Err(error) = rename_directory_event(
                         &conn,
                         &old_path.to_string_lossy(),
