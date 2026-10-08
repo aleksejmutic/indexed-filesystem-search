@@ -349,3 +349,15 @@ pub fn rename_directory_entries(conn: &Connection, old_path: &str, new_path: &st
 
     Ok(())
 }
+
+// renaming a single file entry
+pub fn rename_file_entry(conn: &Connection, old_path: &str, new_path: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE file_entries
+         SET path = ?1
+         WHERE path = ?2",
+        (new_path, old_path),
+    )?;
+
+    Ok(())
+}

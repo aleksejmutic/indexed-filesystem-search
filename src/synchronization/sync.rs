@@ -108,3 +108,13 @@ pub fn rename_directory_event(
 
     Ok(())
 }
+
+// renames a single file event
+pub fn rename_file_event(
+    conn: &Connection,
+    old_path: &str,
+    new_path: &str,
+) -> rusqlite::Result<()> {
+    rename_file_entry(conn, old_path, new_path)?;
+    Ok(())
+}
