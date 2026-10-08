@@ -113,7 +113,7 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                 }
             }
 
-            // file name modification, it should now evaluate both renaming of directories and files
+            // file name rename, it should now evaluate both renaming of directories and files
             if event.kind
                 == notify::EventKind::Modify(notify::event::ModifyKind::Name(
                     notify::event::RenameMode::To,
