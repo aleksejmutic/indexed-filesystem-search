@@ -2,7 +2,7 @@ use crate::config::loader::load_config;
 use crate::database::connection::connect;
 use crate::filesystem::listener;
 use crate::filesystem::scanner::create_file_entry;
-use crate::synchronization::sync::sync_file_event;
+use crate::synchronization::sync::{delete_file_event, sync_file_event};
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher, event::CreateKind};
 use std::path::Path;
 use std::sync::mpsc::channel;
@@ -107,6 +107,7 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                 }
             }
 
+            // file name modification
             if event.kind
                 == notify::EventKind::Modify(notify::event::ModifyKind::Name(
                     notify::event::RenameMode::To,
@@ -135,6 +136,15 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                             println!("Failed to watch {}: {:?}", entry.path().display(), error);
                         }
                     }
+                }
+            }
+
+            // deletion
+            if event.kind == notify::EventKind::Remove(notify::event::RemoveKind::File) {
+                match delete_file_event(&conn, &path.to_string_lossy()) {
+                    Ok(true) => println!("File deletion result: Deleted"),
+                    Ok(false) => println!("File deletion result: Not found"),
+                    Err(error) => println!("Failed to delete file: {:?}", error),
                 }
             }
 

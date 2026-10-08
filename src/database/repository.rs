@@ -183,7 +183,7 @@ fn get_all_file_entries(conn: &Connection) -> Result<Vec<FileEntry>> {
 }
 
 //deletes a file entry
-fn delete_file_entry(conn: &Connection, id: i64) -> Result<()> {
+pub fn delete_file_entry(conn: &Connection, id: i64) -> Result<()> {
     conn.execute("DELETE FROM file_entries WHERE id = ?1", [id])?;
 
     Ok(())

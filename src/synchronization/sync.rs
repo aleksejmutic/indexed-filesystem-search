@@ -1,6 +1,6 @@
 use crate::database::repository::{
-    get_file_entry_by_path, insert_file_entry, update_file_entry, update_file_entry_from_event,
-    update_last_seen,
+    delete_file_entry, get_file_entry_by_path, insert_file_entry, update_file_entry,
+    update_file_entry_from_event, update_last_seen,
 };
 use crate::filesystem::entry::FileEntry;
 use rusqlite::Connection;
@@ -75,6 +75,18 @@ pub fn sync_file_event(conn: &Connection, entry: &FileEntry) -> rusqlite::Result
 
                 Ok(SyncResult::Updated)
             }
+        }
+    }
+}
+
+// deletion of one single event
+pub fn delete_file_event(conn: &Connection, path: &str) -> rusqlite::Result<bool> {
+    match get_file_entry_by_path(conn, path)? {
+        None => Ok(false),
+
+        Some((id, _)) => {
+            delete_file_entry(conn, id)?;
+            Ok(true)
         }
     }
 }
