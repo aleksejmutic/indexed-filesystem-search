@@ -17,6 +17,8 @@ pub fn watch(path: &Path) -> notify::Result<()> {
     // unwrapping what channel returns, that would be a transmitter and a receiver
     let (transmiter, receiver) = channel();
 
+    let mut renamed_from = None;
+
     let mut watcher = RecommendedWatcher::new(
         move |result: notify::Result<Event>| match result {
             Ok(event) => listener::listen(event, &transmiter),
@@ -137,6 +139,15 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                         }
                     }
                 }
+            }
+
+            // event for renaming the file, which changes the path as well
+            if event.kind
+                == notify::EventKind::Modify(notify::event::ModifyKind::Name(
+                    notify::event::RenameMode::From,
+                ))
+            {
+                renamed_from = Some(path.to_path_buf());
             }
 
             // file deletion

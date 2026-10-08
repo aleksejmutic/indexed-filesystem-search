@@ -336,3 +336,16 @@ pub fn search_file_entries(conn: &Connection, query: &str, limit: i64) -> Result
 
     Ok(entries_vec)
 }
+
+// updates a directory path and all of its contents after a rename or move
+pub fn rename_directory_entries(conn: &Connection, old_path: &str, new_path: &str) -> Result<()> {
+    conn.execute(
+        "UPDATE file_entries
+         SET path = ?1 || substr(path, length(?2) + 1)
+         WHERE path = ?2
+            OR path LIKE ?3",
+        (new_path, old_path, format!("{}/%", old_path)),
+    )?;
+
+    Ok(())
+}
