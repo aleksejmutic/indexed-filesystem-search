@@ -5,7 +5,10 @@ use std::sync::mpsc::Sender;
 // the important part with the listen() function is taking events by type and passing them to the channel via transmitter
 pub fn listen(event: Event, transmitter: &Sender<Event>) {
     match event.kind {
-        EventKind::Create(_) | EventKind::Remove(_) | EventKind::Modify(ModifyKind::Name(_)) => {
+        EventKind::Create(_)
+        | EventKind::Remove(_)
+        | EventKind::Modify(ModifyKind::Name(_))
+        | EventKind::Modify(ModifyKind::Data(_)) => {
             println!("Event: {:?}", event.kind);
 
             // this was just a test to print an exact file to see whether it works in the pipeline
