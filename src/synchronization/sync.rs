@@ -1,6 +1,7 @@
 use crate::database::repository::{
     delete_directory_entries, delete_file_entry, get_file_entry_by_path, insert_file_entry,
-    rename_directory_entries, update_file_entry, update_file_entry_from_event, update_last_seen,
+    rename_directory_entries, rename_file_entry, update_file_entry, update_file_entry_from_event,
+    update_last_seen,
 };
 use crate::filesystem::entry::FileEntry;
 use rusqlite::Connection;

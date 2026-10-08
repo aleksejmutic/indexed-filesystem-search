@@ -1,9 +1,11 @@
 use crate::config::loader::load_config;
 use crate::database::connection::connect;
+use crate::database::repository::get_file_entry_by_path;
 use crate::filesystem::listener;
 use crate::filesystem::scanner::create_file_entry;
 use crate::synchronization::sync::{
-    delete_directory_event, delete_file_event, rename_directory_event, sync_file_event,
+    delete_directory_event, delete_file_event, rename_directory_event, rename_file_event,
+    sync_file_event,
 };
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher, event::CreateKind};
 use std::path::{Path, PathBuf};
@@ -111,7 +113,7 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                 }
             }
 
-            // file name modification
+            // file name modification, it should now evaluate both renaming of directories and files
             if event.kind
                 == notify::EventKind::Modify(notify::event::ModifyKind::Name(
                     notify::event::RenameMode::To,
@@ -120,12 +122,35 @@ pub fn watch(path: &Path) -> notify::Result<()> {
                 if let Some(old_path) = renamed_from.take() {
                     println!("OLD: {}", old_path.display());
                     println!("NEW: {}", path.display());
-                    if let Err(error) = rename_directory_event(
-                        &conn,
-                        &old_path.to_string_lossy(),
-                        &path.to_string_lossy(),
-                    ) {
-                        println!("Failed to rename directory in database: {:?}", error);
+
+                    match get_file_entry_by_path(&conn, &old_path.to_string_lossy()) {
+                        Ok(Some((_id, entry))) => {
+                            if entry.is_directory {
+                                if let Err(error) = rename_directory_event(
+                                    &conn,
+                                    &old_path.to_string_lossy(),
+                                    &path.to_string_lossy(),
+                                ) {
+                                    println!("Failed to rename directory in database: {:?}", error);
+                                }
+                            } else {
+                                if let Err(error) = rename_file_event(
+                                    &conn,
+                                    &old_path.to_string_lossy(),
+                                    &path.to_string_lossy(),
+                                ) {
+                                    println!("Failed to rename file in database: {:?}", error);
+                                }
+                            }
+                        }
+
+                        Ok(None) => {
+                            println!("Old path was not found in database.");
+                        }
+
+                        Err(error) => {
+                            println!("Failed to look up old path: {:?}", error);
+                        }
                     }
                 }
 
