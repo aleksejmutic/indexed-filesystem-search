@@ -194,8 +194,8 @@ pub fn delete_directory_entries(conn: &Connection, path: &str) -> Result<()> {
     conn.execute(
         "DELETE FROM file_entries
          WHERE path = ?1
-            OR path LIKE ?2",
-        (path, format!("{}/%", path)),
+            OR substr(path, 1, length(?1) + 1) = ?1 || '/'",
+        [path],
     )?;
 
     Ok(())
@@ -343,8 +343,8 @@ pub fn rename_directory_entries(conn: &Connection, old_path: &str, new_path: &st
         "UPDATE file_entries
          SET path = ?1 || substr(path, length(?2) + 1)
          WHERE path = ?2
-            OR path LIKE ?3",
-        (new_path, old_path, format!("{}/%", old_path)),
+            OR substr(path, 1, length(?2) + 1) = ?2 || '/'",
+        (new_path, old_path),
     )?;
 
     Ok(())
