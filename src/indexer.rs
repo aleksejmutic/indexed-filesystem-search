@@ -1,6 +1,7 @@
 use crate::config::loader::load_config;
-use crate::database::connection::{connect, create_schema};
+use crate::database::connection::connect;
 use crate::database::fts::{is_fts_populated, mark_fts_populated, populate_fts};
+use crate::database::schema::create_schema;
 use crate::filesystem::scanner::scan;
 use crate::synchronization::sync::sync_file_entry;
 use std::time::Instant;

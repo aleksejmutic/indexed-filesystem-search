@@ -1,5 +1,6 @@
 use crate::config::loader::load_config;
-use crate::database::connection::{connect, create_schema};
+use crate::database::connection::connect;
+use crate::database::schema::create_schema;
 use crate::filesystem;
 use crate::filesystem::scanner::scan;
 use crate::search::query::build_fts_query;
