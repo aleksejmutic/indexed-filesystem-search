@@ -20,6 +20,5 @@ fn main() -> rusqlite::Result<()> {
     //test_sync()?;
 
     //test_watcher()?;
-
     Ok(())
 }
