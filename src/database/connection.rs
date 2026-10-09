@@ -50,5 +50,49 @@ pub fn create_schema(conn: &Connection) -> Result<()> {
         (),
     )?;
 
+    // Automatically add new file entries to the FTS5 index
+    conn.execute(
+        "CREATE TRIGGER IF NOT EXISTS file_entries_ai
+             AFTER INSERT ON file_entries
+             BEGIN
+                 INSERT INTO file_entries_fts(rowid, filename, extension, path)
+                 VALUES (new.id, new.filename, new.extension, new.path);
+             END",
+        (),
+    )?;
+
+    // Automatically remove deleted file entries from the FTS5 index
+    conn.execute(
+        "CREATE TRIGGER IF NOT EXISTS file_entries_ad
+             AFTER DELETE ON file_entries
+             BEGIN
+                 INSERT INTO file_entries_fts(
+                     file_entries_fts, rowid, filename, extension, path
+                 )
+                 VALUES (
+                     'delete', old.id, old.filename, old.extension, old.path
+                 );
+             END",
+        (),
+    )?;
+
+    // Automatically update searchable fields in the FTS5 index
+    conn.execute(
+        "CREATE TRIGGER IF NOT EXISTS file_entries_au
+             AFTER UPDATE OF filename, extension, path ON file_entries
+             BEGIN
+                 INSERT INTO file_entries_fts(
+                     file_entries_fts, rowid, filename, extension, path
+                 )
+                 VALUES (
+                     'delete', old.id, old.filename, old.extension, old.path
+                 );
+
+                 INSERT INTO file_entries_fts(rowid, filename, extension, path)
+                 VALUES (new.id, new.filename, new.extension, new.path);
+             END",
+        (),
+    )?;
+
     Ok(())
 }
