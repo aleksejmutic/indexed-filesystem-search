@@ -1,6 +1,6 @@
 # Indexed Filesystem Search
 
-A Linux file launcher that searches indexed filesystem entries. Written in Rust and stores file entries in SQLite. 
+A Linux file launcher that searches indexed filesystem entries. Written in Rust and storing file entries in SQLite. 
 
 Using Pop!_OS's app launcher does not really search the filesystem, it mainly runs recently used apps. 
 
