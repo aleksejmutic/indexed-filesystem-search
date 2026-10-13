@@ -2,8 +2,9 @@
 
 A Linux file launcher that searches indexed filesystem entries. Written in Rust and stores file entries in SQLite. 
 
-The Pop!_OS one does not do any sort of find.
-It scans the user's home directory, or any set default location, while supporting configurable file, extension, and directory exclusions through a TOML configuration file.
+Using Pop!_OS's app launcher does not really search the filesystem, it mainly runs recently used apps. 
+
+The tool I am writing scans the user's home directory, or any set default location, while supporting configurable file, extension, and directory exclusions through a TOML configuration file.
 
 The project is currently focused on building the filesystem index and keeping it synchronized with the actual filesystem.
 
